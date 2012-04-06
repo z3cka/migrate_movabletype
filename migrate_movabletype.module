@@ -1,0 +1,13 @@
+<?php
+/*
+ * Created by JetBrains PhpStorm.
+ * User: cgrzecka
+ * Date: 4/5/12
+ * Time: 10:18 AM
+ */
+function migrate_movabletype_migrate_api() {
+  $api = array(
+    'api' => 2,
+  );
+  return $api;
+}

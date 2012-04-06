@@ -1,0 +1,9 @@
+name = "mt2d"
+description = "Import users and blog content from Movable Type."
+package = "Custom Migrations"
+core = "7.x"
+dependencies[] = "blog"
+dependencies[] = "migrate"
+files[] = "migrate_movabletype.inc"
+
+version = "7.x-1.x-dev"
