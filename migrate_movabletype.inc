@@ -33,6 +33,204 @@ abstract class MovabletypeMigration extends Migration {
 }
 
 /**
+ * Movable Type Blog to Drupal term migration
+ */
+class MovabletypeTermMigration extends MovabletypeMigration {
+  public function __construct() {
+    parent::__construct();
+    // Human-friendly description of your migration process. Be as detailed as you
+    // like.
+    $this->description = t('Migrate MT Blogs as taxonomy terms');
+
+    // Create a map object for tracking the relationships between source rows
+    // and their resulting Drupal objects. Usually, you'll use the MigrateSQLMap
+    // class, which uses database tables for tracking. Pass the machine name
+    // (BeerTerm) of this migration to use in generating map and message tables.
+    // And, pass schema definitions for the primary keys of the source and
+    // destination - we need to be explicit for our source, but the destination
+    // class knows its schema already.
+    $this->map = new MigrateSQLMap($this->machineName,
+      array(
+        'blog_name' => array('type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'description' => 'Blog Name',
+        )
+      ),
+      MigrateDestinationTerm::getKeySchema()
+    );
+
+    // We are getting data from tables in the Drupal default database - first,
+    // set up a query for this data.
+    // Note that by ordering on style_parent, we guarantee root terms are
+    // migrated first, so the parent_name mapping below will find that the
+    // parent exists.
+    $query = db_select('mtdb'.'.mt_blog', 'mtbl')
+      ->fields('mtbl', array(
+//        'blog_id',
+        'blog_description',
+        'blog_name')
+      );
+    // This sort assures that parents are saved before children.
+//      ->orderBy('style_parent', 'ASC');
+
+    // Create a MigrateSource object, which manages retrieving the input data.
+    $this->source = new MigrateSourceSQL($query);
+
+    // Set up our destination - terms in the blog_name vocabulary
+    $this->destination = new MigrateDestinationTerm('blog_name');
+
+    // Assign mappings TO destination fields FROM source fields. To discover
+    // the names used in these calls, use the drush commands
+    // drush migrate-fields-destination BeerTerm
+    // drush migrate-fields-source BeerTerm
+    $this->addFieldMapping('description', 'blog_description');
+    $this->addFieldMapping('name', 'blog_name');
+//    $this->addFieldMapping('tid', 'blog_id');
+
+    // Documenting your mappings makes it easier for the whole team to see
+    // exactly what the status is when developing a migration process.
+//    $this->addFieldMapping('parent_name', 'style_parent')
+//      ->description(t('The incoming style_parent field is the name of the term parent'));
+
+    // Mappings are assigned issue groups, by which they are grouped on the
+    // migration info page when the migrate_ui module is enabled. The default
+    // is 'Done', indicating active mappings which need no attention. A
+    // suggested practice is to use groups of:
+    // Do Not Migrate (or DNM) to indicate source fields which are not being used,
+    //  or destination fields not to be populated by migration.
+    // Client Issues to indicate input from the client is needed to determine
+    //  how a given field is to be migrated.
+    // Implementor Issues to indicate that the client has provided all the
+    //  necessary information, and now the implementor needs to complete the work.
+//    $this->addFieldMapping(NULL, 'hoppiness')
+//      ->description(t('This info will not be maintained in Drupal'))
+//      ->issueGroup(t('DNM'));
+
+    // Open mapping issues can be assigned priorities (the default is
+    // MigrateFieldMapping::ISSUE_PRIORITY_OK). If you're using an issue
+    // tracking system, and have defined issuePattern (see BasicExampleMigration
+    // above), you can specify a ticket/issue number in the system on the
+    // mapping and migrate_ui will link directory to it.
+//    $this->addFieldMapping(NULL, 'region')
+//      ->description('Will a field be added to the vocabulary for this?')
+//      ->issueGroup(t('Client Issues'))
+//      ->issuePriority(MigrateFieldMapping::ISSUE_PRIORITY_MEDIUM)
+//      ->issueNumber(770064);
+
+    // It is good practice to account for all source and destination fields
+    // explicitly - this makes sure that everyone understands exactly what is
+    // being migrated and what is not. Also, migrate_ui highlights unmapped
+    // fields, or mappings involving fields not in the source and destination,
+    // so if (for example) a new field is added to the destination field it's
+    // immediately visible, and you can find out if anything needs to be
+    // migrated into it.
+    $this->addFieldMapping('format')
+      ->issueGroup(t('DNM'));
+    $this->addFieldMapping('weight')
+      ->issueGroup(t('DNM'));
+    $this->addFieldMapping('parent')
+      ->issueGroup(t('DNM'));
+    $this->addFieldMapping('parent_name')
+      ->issueGroup(t('DNM'));
+  }
+}
+
+/**
+ * Movable Type Tags to Drupal term migration
+ */
+class MovabletypeTermTagsMigration extends MovabletypeMigration {
+  public function __construct() {
+    parent::__construct();
+
+    $this->description = t('Migrate MT Tags as taxonomy terms');
+
+    // Create a map object for tracking the relationships between source rows
+    // and their resulting Drupal objects.
+    $this->map = new MigrateSQLMap($this->machineName,
+      array(
+        'tag_id' => array('type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'description' => 'Tags',
+        )
+      ),
+      MigrateDestinationTerm::getKeySchema()
+    );
+
+    // We are getting data from tables in the Drupal default database - first,
+    // set up a query for this data.
+    // Note that by ordering on style_parent, we guarantee root terms are
+    // migrated first, so the parent_name mapping below will find that the
+    // parent exists.
+    $query = db_select('mtdb'.'.mt_tag', 'mtta')
+      ->fields('mtta', array(
+        'tag_id',
+        'tag_name')
+    );
+
+    // Create a MigrateSource object, which manages retrieving the input data.
+    $this->source = new MigrateSourceSQL($query);
+
+    // Set up our destination - terms in the tags vocabulary
+    $this->destination = new MigrateDestinationTerm('tags');
+
+    // Assign mappings TO destination fields FROM source fields.
+    $this->addFieldMapping('field_mt_tag_id', 'tag_id');
+    $this->addFieldMapping('name', 'tag_name');
+
+    // Documenting your mappings makes it easier for the whole team to see
+    // exactly what the status is when developing a migration process.
+//    $this->addFieldMapping('parent_name', 'style_parent')
+//      ->description(t('The incoming style_parent field is the name of the term parent'));
+
+    // Mappings are assigned issue groups, by which they are grouped on the
+    // migration info page when the migrate_ui module is enabled. The default
+    // is 'Done', indicating active mappings which need no attention. A
+    // suggested practice is to use groups of:
+    // Do Not Migrate (or DNM) to indicate source fields which are not being used,
+    //  or destination fields not to be populated by migration.
+    // Client Issues to indicate input from the client is needed to determine
+    //  how a given field is to be migrated.
+    // Implementor Issues to indicate that the client has provided all the
+    //  necessary information, and now the implementor needs to complete the work.
+//    $this->addFieldMapping(NULL, 'hoppiness')
+//      ->description(t('This info will not be maintained in Drupal'))
+//      ->issueGroup(t('DNM'));
+
+    // Open mapping issues can be assigned priorities (the default is
+    // MigrateFieldMapping::ISSUE_PRIORITY_OK). If you're using an issue
+    // tracking system, and have defined issuePattern (see BasicExampleMigration
+    // above), you can specify a ticket/issue number in the system on the
+    // mapping and migrate_ui will link directory to it.
+//    $this->addFieldMapping(NULL, 'region')
+//      ->description('Will a field be added to the vocabulary for this?')
+//      ->issueGroup(t('Client Issues'))
+//      ->issuePriority(MigrateFieldMapping::ISSUE_PRIORITY_MEDIUM)
+//      ->issueNumber(770064);
+
+    // It is good practice to account for all source and destination fields
+    // explicitly - this makes sure that everyone understands exactly what is
+    // being migrated and what is not. Also, migrate_ui highlights unmapped
+    // fields, or mappings involving fields not in the source and destination,
+    // so if (for example) a new field is added to the destination field it's
+    // immediately visible, and you can find out if anything needs to be
+    // migrated into it.
+    $this->addFieldMapping('description')
+      ->issueGroup(t('DNM'));
+    $this->addFieldMapping('format')
+      ->issueGroup(t('DNM'));
+    $this->addFieldMapping('weight')
+      ->issueGroup(t('DNM'));
+    $this->addFieldMapping('parent')
+      ->issueGroup(t('DNM'));
+    $this->addFieldMapping('parent_name')
+      ->issueGroup(t('DNM'));
+  }
+}
+
+
+/**
  * Movable Type author to Drupal user migration.
  */
 class MovabletypeUserMigration extends MovabletypeMigration {
@@ -58,8 +256,8 @@ class MovabletypeUserMigration extends MovabletypeMigration {
     // unmapped source fields, and unmapped destination fields
 
     // Mapped fields
-//    $this->addFieldMapping('is_new')
-//      ->defaultValue(TRUE);
+    $this->addFieldMapping('is_new')
+      ->defaultValue(TRUE);
     $this->addFieldMapping('uid', 'author_id');
     $this->addFieldMapping('mail', 'author_email');
     $this->addFieldMapping('name', 'author_name');
@@ -69,8 +267,8 @@ class MovabletypeUserMigration extends MovabletypeMigration {
     $this->addFieldMapping('created', 'author_created_on');
 
     //set some defaults
-    $this->addFieldMapping('roles')
-      ->defaultValue(4);
+    $this->addFieldMapping('role_names')
+      ->defaultValue(array('blogger'));
     $this->addFieldMapping('status')
       ->defaultValue(1);
     $this->addFieldMapping('theme')
@@ -95,7 +293,17 @@ class MovabletypeUserMigration extends MovabletypeMigration {
 
     // This is a shortcut you can use to mark several destination fields as DNM
     // at once
-    $this->addUnmigratedDestinations(array('signature_format', 'timezone', 'path', 'init', 'is_new'));
+    $this->addUnmigratedDestinations(array(
+      'field_name_full:format',
+      'field_name_full:language',
+      'signature_format',
+      'roles',
+      'timezone',
+//      'path',
+      'init',
+//      'is_new',
+      )
+    );
   }
 }
 
@@ -105,12 +313,12 @@ class MovabletypeUserMigration extends MovabletypeMigration {
 class MovabletypeNodeMigration extends MovabletypeMigration {
   public function __construct() {
     parent::__construct();
-    $this->description = t('MoveableType Blog Posts');
+    $this->description = t('MovableType Blog Posts');
 
     // You may optionally declare dependencies for your migration - other migrations
     // which should run first. In this case, terms assigned to our nodes and
     // the authors of the nodes should be migrated before the nodes themselves.
-    $this->dependencies = array('MovabletypeUser');
+    $this->dependencies = array('MovabletypeTerm', 'MovabletypeUser');
 
     $this->map = new MigrateSQLMap($this->machineName,
       array(
@@ -131,6 +339,9 @@ class MovabletypeNodeMigration extends MovabletypeMigration {
     // comma-separated list.
     $query = db_select('mtdb'.'.mt_entry', 'mten')
       ->fields('mten', array('entry_id', 'entry_author_id', 'entry_title', 'entry_text', 'entry_created_on', 'entry_modified_on'));
+    $query->leftJoin('mtdb'.'.mt_blog', 'mtbl', 'mten.entry_blog_id = mtbl.blog_id');
+    $query->addField('mtbl', 'blog_name');
+
 //    $query->leftJoin('migrate_example_beer_topic_node', 'tb', 'b.bid = tb.bid');
     // Gives a single comma-separated list of related terms
 //    $query->groupBy('tb.bid');
@@ -146,7 +357,15 @@ class MovabletypeNodeMigration extends MovabletypeMigration {
     // dealing with a slow source database.
 //    $this->source = new MigrateSourceSQL($query, array(), $count_query,
 //      array('cache_counts' => TRUE));
-    $this->source = new MigrateSourceSQL($query);
+
+    $source_fields = array(
+//      'entry_id' => t('The entry id in the MT database'),
+      'categories_list' => t('list of categories for each entry'),
+      'tags_list' => t('list of tags for each entry'),
+    );
+
+//    $this->source = new MigrateSourceSQL($query);
+    $this->source = new MigrateSourceSQL($query, $source_fields);
 
     // Set up our destination - nodes of type migrate_example_beer
     $this->destination = new MigrateDestinationNode('blog', array('text_format' => 'html_full'));
@@ -181,6 +400,9 @@ class MovabletypeNodeMigration extends MovabletypeMigration {
     $this->addFieldMapping('uid', 'entry_author_id')
       ->sourceMigration('MovabletypeUser')
       ->defaultValue(1);
+    $this->addFieldMapping('field_blog_name', 'blog_name');
+    $this->addFieldMapping('field_categories', 'categories_list');
+    $this->addFieldMapping('field_tags', 'tags_list');
 
     // This is a multi-value text field
 //    $this->addFieldMapping('field_migrate_example_country', 'countries')
@@ -210,12 +432,154 @@ class MovabletypeNodeMigration extends MovabletypeMigration {
 //      ->arguments($arguments);
 
     // set some defaults
+    $this->addFieldMapping('body:format')
+      ->defaultValue('html_full');
     $this->addFieldMapping('comment')
       ->defaultValue(2);
+    $this->addFieldMapping('field_blog_name:create_term')
+      ->defaultValue('true');
+    $this->addFieldMapping('field_categories:create_term')
+      ->defaultValue('true');
+    $this->addFieldMapping('field_tags:create_term')
+      ->defaultValue('true');
 
     // No unmapped source fields
 
     // Unmapped destination fields
-    $this->addUnmigratedDestinations(array('status', 'promote', 'revision', 'revision_uid', 'sticky', 'log', 'language', 'tnid', 'path'));
+    $this->addUnmigratedDestinations(array(
+      'body:language',
+      'body:summary',
+      'field_blog_name:source_type',
+      'field_categories:source_type',
+      'field_tags:source_type',
+      'status',
+      'promote',
+      'revision',
+      'revision_uid',
+      'sticky',
+      'log',
+      'language',
+      'tnid',
+      )
+    );
+  }
+  public function prepareRow($current_row) {
+    $source_id = $current_row->entry_id;
+    $result = db_select('mtdb'.'.mt_objecttag', 'mtbota')
+      ->fields('mtbota', array('objecttag_object_id', 'objecttag_tag_id'))
+      ->condition('objecttag_object_id', $source_id)
+      ->execute();
+    foreach ($result as $row) {
+      // grab table that has the names of the tags
+      $tag_names = db_select('mtdb'.'.mt_tag', 'mtta')
+        ->fields('mtta', array('tag_id', 'tag_name'))
+        ->condition('tag_id', $row->objecttag_tag_id)
+        ->execute();
+      foreach ($tag_names as $tag_name) {
+        $current_row->tags_list[] = $tag_name->tag_name;
+      }
+    }
+    $result = db_select('mtdb'.'.mt_placement', 'mtpl')
+      ->fields('mtpl', array('placement_entry_id', 'placement_category_id'))
+      ->condition('placement_entry_id', $source_id)
+      ->execute();
+    foreach ($result as $row) {
+      $cat_names = db_select('mtdb'.'.mt_category', 'mtca')
+        ->fields('mtca', array('category_id', 'category_label'))
+        ->condition('category_id', $row->placement_category_id)
+        ->execute();
+      foreach ($cat_names as $cat_name) {
+        $current_row->categories_list[] = $cat_name->category_label;
+      }
+    }
+
+    // We could also have used this function to decide to skip a row, in cases
+    // where that couldn't easily be done through the original query. Simply
+    // return FALSE in such cases.
+    return TRUE;
+  }
+}
+
+/**
+ * Import items from the migrate_example_beer_comment table and make them into
+ * Drupal comment objects.
+ */
+class MovabletypeCommentMigration extends MovabletypeMigration {
+  public function __construct() {
+    parent::__construct();
+    $this->description = 'Comments on blog posts';
+    $this->dependencies = array('MovabletypeUser', 'MovabletypeNode');
+    $this->map = new MigrateSQLMap($this->machineName,
+      array('comment_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      )
+      ),
+      MigrateDestinationComment::getKeySchema()
+    );
+    $query = db_select('mtdb'.'.mt_comment', 'mtco')
+      ->fields('mtco', array('comment_id',
+//      'comment_author',
+      'comment_email', 'comment_entry_id',
+      'comment_text',
+      'comment_created_on', 'comment_modified_on'));
+//      ->orderBy('cid_parent', 'ASC');
+    // uid is not in the comment table ... let's grab it from the mt_author table
+    // *** the following is making an assumption that all comments are from blog authors ***
+    $query->leftJoin('mtdb'.'.mt_author', 'mtau', 'mtco.comment_email = mtau.author_email');
+    $query->addField('mtau', 'author_id');
+    $query->addField('mtau', 'author_name');
+
+    $this->source = new MigrateSourceSQL($query);
+    $this->destination = new MigrateDestinationComment('comment_node_blog');
+
+    // Mapped fields
+//    $this->addSimpleMappings(array('name', 'subject', 'mail'));
+    $this->addFieldMapping('mail', 'comment_email');
+    $this->addFieldMapping('name', 'author_name');
+    $this->addFieldMapping('status')
+      ->defaultValue(COMMENT_PUBLISHED);
+
+    // We preserved bid => nid ids during BeerNode import so simple mapping suffices.
+    $this->addFieldMapping('nid', 'comment_entry_id');
+
+    $this->addFieldMapping('uid', 'author_id')
+      ->sourceMigration('MovabletypeUser')
+      ->defaultValue(0);
+
+//    $this->addFieldMapping('pid', 'cid_parent')
+//      ->sourceMigration('BeerComment')
+//      ->description('Parent comment.');
+
+    $this->addFieldMapping('comment_body', 'comment_text');
+    $this->addFieldMapping('created', 'comment_created_on');
+    $this->addFieldMapping('changed', 'comment_modified_on');
+
+    // No unmapped source fields
+//    $this->addUnmigratedSources(array(
+//      'comment_author',
+//      'comment_email',
+//      )
+//    );
+
+    // Unmapped destination fields
+    $this->addUnmigratedDestinations(array(
+      'hostname',
+//      'created',
+//      'changed',
+      'thread',
+      'homepage',
+      'language',
+      'comment_body:format',
+      'comment_body:language',
+      'pid',
+      'subject',
+      )
+    );
+
+    if (module_exists('path')) {
+      $this->addFieldMapping('path')
+        ->issueGroup(t('DNM'));
+    }
   }
 }
